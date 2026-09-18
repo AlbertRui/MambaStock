@@ -1,0 +1,80 @@
+# ============================================
+# Python + PyCharm 通用 .gitignore
+# 按需增删，注释行以 # 开头
+# ============================================
+
+# ---------- Python 字节码与运行缓存 ----------
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.cache/
+
+# ---------- 虚拟环境 ----------
+.venv/
+venv/
+env/
+ENV/
+env.bak/
+venv.bak/
+# conda 环境（如用 conda 管理）
+.conda/
+
+# ---------- 包构建产物（打包发布时生成） ----------
+build/
+dist/
+*.egg-info/
+.eggs/
+wheels/
+sdist/
+
+# ---------- 测试与静态检查缓存 ----------
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.pytype/
+.hypothesis/
+.coverage
+.coverage.*
+htmlcov/
+.tox/
+.nox/
+
+# ---------- 日志与临时文件 ----------
+*.log
+logs/
+*.tmp
+*.bak
+*.swp
+*.swo
+
+# ---------- 环境变量与密钥（重要） ----------
+# 本地配置放 .env，但要保留 .env.example 作为模板提交
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+
+# ---------- 数据库与本地数据文件 ----------
+*.sqlite3
+*.sqlite
+*.db
+*.db-journal
+
+# ---------- Jupyter Notebook 检查点 ----------
+.ipynb_checkpoints/
+
+# ---------- PyCharm / IDE ----------
+.idea/
+*.iml
+.vscode/
+
+# ---------- 系统文件 ----------
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# ---------- 本地私有目录 ----------
+# 自定义目录：把本地独有的下载/上传目录写在这里
+# downloads/
