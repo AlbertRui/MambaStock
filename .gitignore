@@ -85,6 +85,7 @@ docs/csv_full/
 
 # 传输归档
 *.tar.gz
+nohup.out
 
 # kimi
 AGENTS.md
