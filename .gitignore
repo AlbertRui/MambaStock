@@ -78,6 +78,13 @@ desktop.ini
 # ---------- 本地私有目录 ----------
 # 自定义目录：把本地独有的下载/上传目录写在这里
 # downloads/
+docs/csv_full/
+
+# Office 临时锁文件
+~$*
+
+# 传输归档
+*.tar.gz
 
 # kimi
 AGENTS.md

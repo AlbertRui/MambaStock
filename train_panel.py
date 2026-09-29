@@ -104,8 +104,8 @@ def main():
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
     os.makedirs(args.outdir, exist_ok=True)
     use_attn = not args.no_attention
-    # 输出文件标签：区分 注意力开/关 × 预测期限，避免不同实验互相覆盖
-    tag = f"{'attn' if use_attn else 'noattn'}_h{args.horizon}"
+    # 输出文件标签：区分 注意力开/关 × 波动加权 × 预测期限，避免不同实验互相覆盖
+    tag = f"{'attn' if use_attn else 'noattn'}{'vw' if args.vol_weight else ''}_h{args.horizon}"
 
     # ---------- 数据 ----------
     csv_paths = sorted(glob.glob(os.path.join(args.dir, '*.csv')))
@@ -195,7 +195,11 @@ def main():
         model.load_state_dict(best_state)
 
     # ---------- 测试（整体 + 逐股指标；注意力开启时顺便收集权重） ----------
-    test_pred, test_attn = predict(model, ds.X_test, device, need_attn=use_attn)
+    if use_attn:
+        test_pred, test_attn = predict(model, ds.X_test, device, need_attn=True)
+    else:
+        # need_attn=False 时 predict 只返回预测值数组，不能解包成两个变量
+        test_pred, test_attn = predict(model, ds.X_test, device), None
     m = regression_metrics(ds.y_test.ravel(), test_pred.ravel())
     print('-' * 66)
     print(f'最优验证 MSE: {best_val:.6f}（模型选择只依据验证集，不用测试集调参）')
