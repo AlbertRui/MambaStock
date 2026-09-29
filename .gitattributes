@@ -1,2 +1,7 @@
 # Auto detect text files and perform LF normalization
 * text=auto
+
+# 代码与脚本强制 LF：保证 Windows 本地与 Linux GPU 服务器行为一致
+# （.sh 若被转成 CRLF，在 Linux 上执行会直接报语法错误）
+*.py   text eol=lf
+*.sh   text eol=lf
