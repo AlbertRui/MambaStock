@@ -1,0 +1,134 @@
+=== 600036.SH bimamba horizon=1 hidden=16 lr=1e-3 wd=3e-4 seed=1 12:25 ===
+=== 600036.SH bimamba horizon=1 hidden=16 lr=1e-3 wd=3e-4 seed=1 12:31 ===
+最优验证 MSE: 0.000430（模型选择只依据验证集，不用测试集调参）
+  MSE  0.000429
+  RMSE 0.020724
+  MAE  0.015289
+  R2   -0.1074
+  DA   0.4492  (方向准确率)
+=== 600036.SH baseline horizon=1 hidden=32 lr=1e-3 wd=1e-4 seed=1 12:45 ===
+早停于第 103 轮（验证 MSE 连续 30 轮未改善）
+最优验证 MSE: 0.000436（模型选择只依据验证集，不用测试集调参）
+  MSE  0.000433
+  RMSE 0.020804
+  MAE  0.015421
+  R2   -0.1160
+  DA   0.5085  (方向准确率)
+=== 600036.SH bimamba horizon=1 hidden=32 lr=1e-3 wd=1e-4 seed=1 12:50 ===
+早停于第 105 轮（验证 MSE 连续 30 轮未改善）
+最优验证 MSE: 0.000447（模型选择只依据验证集，不用测试集调参）
+  MSE  0.000415
+  RMSE 0.020362
+  MAE  0.015176
+  R2   -0.0691
+  DA   0.5085  (方向准确率)
+=== 601288.SH baseline horizon=1 hidden=32 lr=1e-3 wd=1e-4 seed=1 13:02 ===
+早停于第 121 轮（验证 MSE 连续 30 轮未改善）
+最优验证 MSE: 0.000065（模型选择只依据验证集，不用测试集调参）
+  MSE  0.000043
+  RMSE 0.006533
+  MAE  0.004991
+  R2   -0.2192
+  DA   0.3220  (方向准确率)
+=== 601288.SH bimamba horizon=1 hidden=32 lr=1e-3 wd=1e-4 seed=1 13:10 ===
+--- 跳过（已有结果）: 600036.SH bimamba horizon=1 hidden=16 lr=1e-3 wd=3e-4 seed=1
+--- 跳过（已有结果）: 600036.SH baseline horizon=1 hidden=32 lr=1e-3 wd=1e-4 seed=1
+--- 跳过（已有结果）: 600036.SH bimamba horizon=1 hidden=32 lr=1e-3 wd=1e-4 seed=1
+--- 跳过（已有结果）: 601288.SH baseline horizon=1 hidden=32 lr=1e-3 wd=1e-4 seed=1
+=== 601288.SH bimamba horizon=1 hidden=32 lr=1e-3 wd=1e-4 seed=1 13:51 ===
+早停于第 119 轮（验证 MSE 连续 30 轮未改善）
+最优验证 MSE: 0.000064（模型选择只依据验证集，不用测试集调参）
+  MSE  0.000039
+  RMSE 0.006210
+  MAE  0.004651
+  R2   -0.1015
+  DA   0.3475  (方向准确率)
+=== 601328.SH baseline horizon=1 hidden=32 lr=1e-3 wd=1e-4 seed=1 14:31 ===
+最优验证 MSE: 0.000096（模型选择只依据验证集，不用测试集调参）
+  MSE  0.000130
+  RMSE 0.011414
+  MAE  0.007643
+  R2   -0.2156
+  DA   0.5508  (方向准确率)
+=== 601328.SH bimamba horizon=1 hidden=32 lr=1e-3 wd=1e-4 seed=1 15:00 ===
+早停于第 109 轮（验证 MSE 连续 30 轮未改善）
+最优验证 MSE: 0.000096（模型选择只依据验证集，不用测试集调参）
+  MSE  0.000114
+  RMSE 0.010670
+  MAE  0.007466
+  R2   -0.0623
+  DA   0.5678  (方向准确率)
+=== 601988.SH baseline horizon=1 hidden=32 lr=1e-3 wd=1e-4 seed=1 15:36 ===
+早停于第 97 轮（验证 MSE 连续 30 轮未改善）
+最优验证 MSE: 0.000056（模型选择只依据验证集，不用测试集调参）
+  MSE  0.000042
+  RMSE 0.006470
+  MAE  0.005012
+  R2   -0.3475
+  DA   0.3559  (方向准确率)
+=== 601988.SH bimamba horizon=1 hidden=32 lr=1e-3 wd=1e-4 seed=1 15:46 ===
+早停于第 106 轮（验证 MSE 连续 30 轮未改善）
+最优验证 MSE: 0.000057（模型选择只依据验证集，不用测试集调参）
+  MSE  0.000037
+  RMSE 0.006067
+  MAE  0.004507
+  R2   -0.1847
+  DA   0.3559  (方向准确率)
+=== 600036.SH baseline horizon=5 hidden=16 lr=1e-3 wd=1e-4 seed=1 16:17 ===
+早停于第 103 轮（验证 MSE 连续 30 轮未改善）
+最优验证 MSE: 0.001613（模型选择只依据验证集，不用测试集调参）
+  MSE  0.002064
+  RMSE 0.045437
+  MAE  0.033787
+  R2   -0.2464
+  DA   0.5641  (方向准确率)
+=== 600036.SH bimamba horizon=5 hidden=16 lr=1e-3 wd=1e-4 seed=1 16:22 ===
+最优验证 MSE: 0.001492（模型选择只依据验证集，不用测试集调参）
+  MSE  0.002181
+  RMSE 0.046702
+  MAE  0.036175
+  R2   -0.3168
+  DA   0.4701  (方向准确率)
+=== 601288.SH baseline horizon=5 hidden=16 lr=1e-3 wd=1e-4 seed=1 16:40 ===
+最优验证 MSE: 0.000440（模型选择只依据验证集，不用测试集调参）
+  MSE  0.000174
+  RMSE 0.013209
+  MAE  0.009877
+  R2   -0.2672
+  DA   0.4786  (方向准确率)
+=== 601288.SH bimamba horizon=5 hidden=16 lr=1e-3 wd=1e-4 seed=1 16:51 ===
+最优验证 MSE: 0.000563（模型选择只依据验证集，不用测试集调参）
+  MSE  0.000207
+  RMSE 0.014391
+  MAE  0.011026
+  R2   -0.5042
+  DA   0.3846  (方向准确率)
+=== 601328.SH baseline horizon=5 hidden=16 lr=1e-3 wd=1e-4 seed=1 16:59 ===
+最优验证 MSE: 0.000562（模型选择只依据验证集，不用测试集调参）
+  MSE  0.000311
+  RMSE 0.017632
+  MAE  0.013832
+  R2   -0.0858
+  DA   0.4615  (方向准确率)
+=== 601328.SH bimamba horizon=5 hidden=16 lr=1e-3 wd=1e-4 seed=1 17:04 ===
+最优验证 MSE: 0.000667（模型选择只依据验证集，不用测试集调参）
+  MSE  0.000489
+  RMSE 0.022108
+  MAE  0.017364
+  R2   -0.7071
+  DA   0.4103  (方向准确率)
+=== 601988.SH baseline horizon=5 hidden=16 lr=1e-3 wd=1e-4 seed=1 17:12 ===
+最优验证 MSE: 0.000280（模型选择只依据验证集，不用测试集调参）
+  MSE  0.000163
+  RMSE 0.012786
+  MAE  0.009846
+  R2   -0.3845
+  DA   0.4530  (方向准确率)
+=== 601988.SH bimamba horizon=5 hidden=16 lr=1e-3 wd=1e-4 seed=1 17:17 ===
+最优验证 MSE: 0.000287（模型选择只依据验证集，不用测试集调参）
+  MSE  0.000171
+  RMSE 0.013065
+  MAE  0.009937
+  R2   -0.4455
+  DA   0.4615  (方向准确率)
+ALL DONE 17:24

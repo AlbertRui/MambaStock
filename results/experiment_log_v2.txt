@@ -1,0 +1,76 @@
+=== 600036.SH baseline volw=off horizon=1 hidden=32 lr=1e-3 wd=1e-4 seed=1 15:37 ===
+早停于第 90 轮（验证 MSE 连续 30 轮未改善）
+最优验证 MSE: 0.000244（模型选择只依据验证集，不用测试集调参）
+  MSE  0.000154
+  RMSE 0.012400
+  MAE  0.009111
+  R2   -0.1347
+  DA   0.4883  (方向准确率)
+=== 600036.SH bimamba volw=off horizon=1 hidden=32 lr=1e-3 wd=1e-4 seed=1 16:11 ===
+早停于第 60 轮（验证 MSE 连续 30 轮未改善）
+最优验证 MSE: 0.000243（模型选择只依据验证集，不用测试集调参）
+  MSE  0.000144
+  RMSE 0.011988
+  MAE  0.008769
+  R2   -0.0606
+  DA   0.4844  (方向准确率)
+=== 600036.SH baseline volw=on horizon=1 hidden=32 lr=1e-3 wd=1e-4 seed=1 16:43 ===
+--- 跳过（已有结果）: 600036.SH baseline volw=off horizon=1 hidden=32 lr=1e-3 wd=1e-4 seed=1
+--- 跳过（已有结果）: 600036.SH bimamba volw=off horizon=1 hidden=32 lr=1e-3 wd=1e-4 seed=1
+=== 600036.SH baseline volw=on horizon=1 hidden=32 lr=1e-3 wd=1e-4 seed=1 17:49 ===
+早停于第 139 轮（验证 MSE 连续 30 轮未改善）
+最优验证 MSE: 0.000241（模型选择只依据验证集，不用测试集调参）
+  MSE  0.000152
+  RMSE 0.012328
+  MAE  0.009100
+  R2   -0.1216
+  DA   0.4844  (方向准确率)
+=== 600036.SH bimamba volw=on horizon=1 hidden=32 lr=1e-3 wd=1e-4 seed=1 18:54 ===
+早停于第 60 轮（验证 MSE 连续 30 轮未改善）
+最优验证 MSE: 0.000242（模型选择只依据验证集，不用测试集调参）
+  MSE  0.000160
+  RMSE 0.012663
+  MAE  0.009290
+  R2   -0.1833
+  DA   0.5430  (方向准确率)
+=== 601288.SH baseline volw=off horizon=1 hidden=32 lr=1e-3 wd=1e-4 seed=1 19:35 ===
+早停于第 73 轮（验证 MSE 连续 30 轮未改善）
+最优验证 MSE: 0.000171（模型选择只依据验证集，不用测试集调参）
+  MSE  0.000169
+  RMSE 0.013004
+  MAE  0.010118
+  R2   -0.0007
+  DA   0.5352  (方向准确率)
+=== 601288.SH bimamba volw=off horizon=1 hidden=32 lr=1e-3 wd=1e-4 seed=1 19:55 ===
+早停于第 56 轮（验证 MSE 连续 30 轮未改善）
+最优验证 MSE: 0.000178（模型选择只依据验证集，不用测试集调参）
+  MSE  0.000189
+  RMSE 0.013744
+  MAE  0.010760
+  R2   -0.1178
+  DA   0.4727  (方向准确率)
+=== 601288.SH baseline volw=on horizon=1 hidden=32 lr=1e-3 wd=1e-4 seed=1 20:27 ===
+早停于第 150 轮（验证 MSE 连续 30 轮未改善）
+最优验证 MSE: 0.000171（模型选择只依据验证集，不用测试集调参）
+  MSE  0.000170
+  RMSE 0.013038
+  MAE  0.010179
+  R2   -0.0059
+  DA   0.5352  (方向准确率)
+=== 601288.SH bimamba volw=on horizon=1 hidden=32 lr=1e-3 wd=1e-4 seed=1 21:36 ===
+早停于第 150 轮（验证 MSE 连续 30 轮未改善）
+最优验证 MSE: 0.000172（模型选择只依据验证集，不用测试集调参）
+  MSE  0.000173
+  RMSE 0.013157
+  MAE  0.010270
+  R2   -0.0243
+  DA   0.5078  (方向准确率)
+=== 601328.SH baseline volw=off horizon=1 hidden=32 lr=1e-3 wd=1e-4 seed=1 10:25 ===
+早停于第 76 轮（验证 MSE 连续 30 轮未改善）
+最优验证 MSE: 0.000204（模型选择只依据验证集，不用测试集调参）
+  MSE  0.000138
+  RMSE 0.011768
+  MAE  0.009198
+  R2   -0.0881
+  DA   0.4453  (方向准确率)
+=== 601328.SH bimamba volw=off horizon=1 hidden=32 lr=1e-3 wd=1e-4 seed=1 10:49 ===
