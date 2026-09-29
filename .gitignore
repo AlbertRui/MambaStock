@@ -83,6 +83,11 @@ docs/csv_full/
 # Office 临时锁文件
 ~$*
 
+# 答辩/论文文档（仅本地保留，不上传 GitHub）
+docs/*.docx
+docs/*.pptx
+docs/*.pdf
+
 # 传输归档
 *.tar.gz
 nohup.out
