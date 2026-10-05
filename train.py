@@ -10,6 +10,8 @@
     2. results/ 下自动保存两张图（答辩展示素材）:
        - {股票}_price.png  测试段真实次日收盘价 vs 模型一步预测价格
        - {stock}_loss.png   训练损失与验证 MSE 收敛曲线
+    3. 加 --save-pred 时额外保存 {stock}_{model}_h{horizon}_pred.npz
+       （测试集锚点日期/收盘价/真实与预测收益率，供多模型叠加对比图使用）
 """
 
 import argparse
@@ -49,6 +51,8 @@ def parse_args():
     p.add_argument('--patience', type=int, default=15, help='早停耐心（验证 MSE 多少轮不降则停）')
     p.add_argument('--seed', type=int, default=1, help='随机种子（保证可复现）')
     p.add_argument('--vol-weight', action='store_true', help='启用波动自适应损失加权')
+    p.add_argument('--save-pred', action='store_true',
+                   help='额外保存测试集预测值 npz（供多模型叠加对比图使用）')
     p.add_argument('--outdir', type=str, default='results', help='结果图片输出目录')
     return p.parse_args()
 
@@ -187,6 +191,17 @@ def main():
     print(f"  R2   {m['R2']:.4f}")
     print(f"  DA   {m['DA']:.4f}  (方向准确率)")
     print(f'训练耗时 {time.time() - t0:.1f}s')
+
+    # ---------- 可选：导出测试集预测值 ----------
+    # 保存锚点日期/锚点收盘价/真实收益率/预测收益率，
+    # 供多模型叠加对比图（基线 vs 双向 vs 完整模型画在同一张图）使用
+    if args.save_pred:
+        npz_path = os.path.join(
+            args.outdir, f'{stock}_{args.model}_h{args.horizon}'
+            + ('_vw' if args.vol_weight else '') + '_pred.npz')
+        np.savez(npz_path, dates=ds.dates_test, close=ds.close_test,
+                 y_true=ds.y_test, y_pred=test_pred)
+        print(f'预测值已保存: {npz_path}')
 
     # ---------- 出图 1：价格还原对比（最直观的答辩展示图） ----------
     # 用锚点日真实收盘价 * exp(预测/真实对数收益率) 还原"次日收盘价"，

@@ -51,6 +51,10 @@ def parse_args():
     p.add_argument('--no-attention', action='store_true',
                    help='关闭跨股票注意力（模块二消融对照，退化为逐股独立双向预测）')
     p.add_argument('--vol-weight', action='store_true', help='启用波动自适应损失加权（模块三）')
+    p.add_argument('--save-attn', action='store_true',
+                   help='额外保存测试集逐日注意力权重 npz 并打印诊断统计')
+    p.add_argument('--attn-nowd', action='store_true',
+                   help='注意力分支 Q/K/V 投影免权重衰减（缓解注意力权重坍缩为均匀分布）')
     p.add_argument('--outdir', type=str, default='results', help='结果图片输出目录')
     return p.parse_args()
 
@@ -106,6 +110,8 @@ def main():
     use_attn = not args.no_attention
     # 输出文件标签：区分 注意力开/关 × 波动加权 × 预测期限，避免不同实验互相覆盖
     tag = f"{'attn' if use_attn else 'noattn'}{'vw' if args.vol_weight else ''}_h{args.horizon}"
+    if args.attn_nowd and use_attn:
+        tag += '_nowd'  # 与默认配置的结果文件区分开
 
     # ---------- 数据 ----------
     csv_paths = sorted(glob.glob(os.path.join(args.dir, '*.csv')))
@@ -143,7 +149,19 @@ def main():
     n_params = sum(p.numel() for p in model.parameters())
     print(f'模型: PanelBiMamba (attention={use_attn}) | 参数量: {n_params:,}')
 
-    opt = torch.optim.Adam(model.parameters(), lr=args.lr, weight_decay=args.wd)
+    # 注意力坍缩修复（对应报告问题(6)）：Q/K/V 投影的梯度信号弱，
+    # 在统一权重衰减下被压至近零，softmax 退化为精确均匀分布（各股 1/N）；
+    # --attn-nowd 将注意力分支豁免出权重衰减，让差异化权重有机会形成
+    if args.attn_nowd and use_attn:
+        attn_params = [p_ for n_, p_ in model.named_parameters() if n_.startswith('attn.')]
+        other_params = [p_ for n_, p_ in model.named_parameters() if not n_.startswith('attn.')]
+        opt = torch.optim.Adam([
+            {'params': other_params, 'weight_decay': args.wd},
+            {'params': attn_params, 'weight_decay': 0.0},
+        ], lr=args.lr)
+        print(f'注意力分支免权重衰减: {len(attn_params)} 个参数张量 wd=0，其余 wd={args.wd}')
+    else:
+        opt = torch.optim.Adam(model.parameters(), lr=args.lr, weight_decay=args.wd)
     mse = nn.MSELoss(reduction='none')  # 逐样本损失，便于做波动加权
     vol_loss = VolatilityAdaptiveLoss()  # 【模块三】波动自适应损失
 
@@ -217,6 +235,19 @@ def main():
         mi = regression_metrics(ds.y_test[:, i], test_pred[:, i])
         print(f"  {code:<10} {mi['MSE']:>10.6f} {mi['R2']:>8.4f} {mi['DA']:>8.4f}")
     print(f'训练耗时 {time.time() - t0:.1f}s')
+
+    # ---------- 可选：导出逐日注意力权重 + 诊断统计 ----------
+    # 用于核查注意力分布形态（是否近似均匀 1/N、对角线是否占优），
+    # 避免只凭热力图观感下结论
+    if use_attn and args.save_attn:
+        npz_path = os.path.join(args.outdir, f'panel_{tag}_attn.npz')
+        np.savez(npz_path, attn=test_attn, codes=np.array(ds.codes))
+        n = test_attn.shape[1]
+        dev = np.abs(test_attn - 1.0 / n)          # 与均匀权重的逐元素偏差
+        diag = np.diagonal(test_attn, axis1=1, axis2=2).mean()  # 自注意力平均
+        print(f'注意力诊断: 1/N={1/n:.4f} | 逐日偏差 max={dev.max():.8f} mean={dev.mean():.8f} '
+              f'| 对角线平均权重 {diag:.6f}')
+        print(f'注意力权重已保存: {npz_path}')
 
     # ---------- 出图 1：训练收敛曲线 ----------
     fig, ax = plt.subplots(figsize=(8, 4))
