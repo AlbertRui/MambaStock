@@ -28,10 +28,10 @@ from sklearn.metrics import mean_absolute_error, mean_squared_error, r2_score
 from torch.utils.data import DataLoader, TensorDataset
 
 from data import FEATURE_NAMES, load_stock_dataset
-from models import BiMambaStock, MambaBaseline, VolatilityAdaptiveLoss
+from models import BiMambaStock, MambaBaseline, TransformerBaseline, VolatilityAdaptiveLoss
 
-# 可选模型注册表：baseline=单向基线，bimamba=模块一双向模型（后续扩展多股票）
-MODELS = {'baseline': MambaBaseline, 'bimamba': BiMambaStock}
+# 可选模型注册表：baseline=单向基线，bimamba=模块一双向模型，transformer=开题指定对比基线
+MODELS = {'baseline': MambaBaseline, 'bimamba': BiMambaStock, 'transformer': TransformerBaseline}
 
 
 def parse_args():
@@ -41,9 +41,9 @@ def parse_args():
     p.add_argument('--window', type=int, default=60, help='滑动窗口长度（交易日）')
     p.add_argument('--sample-start', type=str, default='2019-01-01', help='样本起始日')
     p.add_argument('--model', type=str, default='baseline', choices=list(MODELS),
-                   help='模型：baseline=单向Mamba基线，bimamba=模块一双向模型')
-    p.add_argument('--hidden', type=int, default=16, help='Mamba 模型维度 d_model')
-    p.add_argument('--layer', type=int, default=2, help='Mamba 层数')
+                   help='模型：baseline=单向Mamba基线，bimamba=模块一双向模型，transformer=Transformer基线')
+    p.add_argument('--hidden', type=int, default=16, help='模型维度 d_model')
+    p.add_argument('--layer', type=int, default=2, help='编码器层数')
     p.add_argument('--epochs', type=int, default=100, help='最大训练轮数')
     p.add_argument('--bs', type=int, default=32, help='批量大小')
     p.add_argument('--lr', type=float, default=1e-3, help='学习率')

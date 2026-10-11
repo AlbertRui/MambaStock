@@ -29,7 +29,10 @@ from sklearn.metrics import mean_absolute_error, mean_squared_error, r2_score
 from torch.utils.data import DataLoader, TensorDataset
 
 from data import FEATURE_NAMES, load_panel_dataset
-from models import PanelBiMamba, VolatilityAdaptiveLoss
+from models import PanelBiMamba, PanelTransformer, VolatilityAdaptiveLoss
+
+# 编码器架构注册表：bimamba=双向Mamba（本文模型），transformer=Transformer基线（对照用）
+ARCHS = {'bimamba': PanelBiMamba, 'transformer': PanelTransformer}
 
 
 def parse_args():
@@ -40,8 +43,10 @@ def parse_args():
     p.add_argument('--horizon', type=int, default=1, help='预测期限：1=次日，5=未来5日')
     p.add_argument('--window', type=int, default=60, help='滑动窗口长度（交易日）')
     p.add_argument('--sample-start', type=str, default='2019-01-01', help='样本起始日')
-    p.add_argument('--hidden', type=int, default=32, help='Mamba 模型维度 d_model')
-    p.add_argument('--layer', type=int, default=2, help='Mamba 层数')
+    p.add_argument('--arch', type=str, default='bimamba', choices=list(ARCHS),
+                   help='编码器架构：bimamba=双向Mamba（本文模型），transformer=Transformer基线')
+    p.add_argument('--hidden', type=int, default=32, help='模型维度 d_model')
+    p.add_argument('--layer', type=int, default=2, help='编码器层数')
     p.add_argument('--epochs', type=int, default=100, help='最大训练轮数')
     p.add_argument('--bs', type=int, default=32, help='批量大小（按交易日批切）')
     p.add_argument('--lr', type=float, default=1e-3, help='学习率')
@@ -108,8 +113,14 @@ def main():
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
     os.makedirs(args.outdir, exist_ok=True)
     use_attn = not args.no_attention
-    # 输出文件标签：区分 注意力开/关 × 波动加权 × 预测期限，避免不同实验互相覆盖
+    if args.arch == 'transformer' and use_attn:
+        # Transformer 基线为纯逐股编码架构，不接跨股票注意力（保证对照唯一变量）
+        print('提示: Transformer 基线不含跨股票注意力，自动忽略注意力开关')
+        use_attn = False
+    # 输出文件标签：区分 架构 × 注意力开/关 × 波动加权 × 预测期限，避免不同实验互相覆盖
     tag = f"{'attn' if use_attn else 'noattn'}{'vw' if args.vol_weight else ''}_h{args.horizon}"
+    if args.arch != 'bimamba':
+        tag = f'{args.arch}_' + tag  # 非默认架构加前缀，避免覆盖 bimamba 结果文件
     if args.attn_nowd and use_attn:
         tag += '_nowd'  # 与默认配置的结果文件区分开
 
@@ -144,10 +155,14 @@ def main():
     )
 
     # ---------- 模型 ----------
-    model = PanelBiMamba(n_features=len(FEATURE_NAMES), d_model=args.hidden,
-                         n_layers=args.layer, use_attention=use_attn).to(device)
+    if args.arch == 'bimamba':
+        model = PanelBiMamba(n_features=len(FEATURE_NAMES), d_model=args.hidden,
+                             n_layers=args.layer, use_attention=use_attn).to(device)
+    else:
+        model = PanelTransformer(n_features=len(FEATURE_NAMES), d_model=args.hidden,
+                                 n_layers=args.layer).to(device)
     n_params = sum(p.numel() for p in model.parameters())
-    print(f'模型: PanelBiMamba (attention={use_attn}) | 参数量: {n_params:,}')
+    print(f'模型: {args.arch} (attention={use_attn}) | 参数量: {n_params:,}')
 
     # 注意力坍缩修复（对应报告问题(6)）：Q/K/V 投影的梯度信号弱，
     # 在统一权重衰减下被压至近零，softmax 退化为精确均匀分布（各股 1/N）；

@@ -4,6 +4,7 @@
 
   ┌─────────────────────────────────────────────────────────────┐
   │ MambaBaseline            单向 Mamba 基线（MambaStock 修正版）│
+  │ TransformerBaseline      Transformer 编码器基线（开题指定对比）│
   ├─────────────────────────────────────────────────────────────┤
   │ 【模块一】BidirectionalMamba      双向选择性扫描 + 门控融合  │
   │          对应开题 2.3(1)：双向选择性扫描机制的股价序列编码   │
@@ -17,6 +18,7 @@
   ├─────────────────────────────────────────────────────────────┤
   │ BiMambaStock             模块一组装的单股票核心模型          │
   │ PanelBiMamba             模块一+二+门控融合的多股票面板模型  │
+  │ PanelTransformer         Transformer 基线的面板版本（对照用）│
   └─────────────────────────────────────────────────────────────┘
 
 设计原则：三个模块独立可插拔 —— 消融实验 = 逐个移除再对比。
@@ -127,6 +129,68 @@ class VolatilityAdaptiveLoss(nn.Module):
     def forward(self, pred: torch.Tensor, target: torch.Tensor, weight: torch.Tensor) -> torch.Tensor:
         per_sample = (pred - target) ** 2          # 逐样本 MSE，可无缝换成 MAE（开题原文）
         return (weight * per_sample).sum() / weight.sum()
+
+
+# ---------------------------------------------------------------------------
+# Transformer 基线（开题报告指定的对比基线之一，对应 2.2 节文献 [6]）
+# ---------------------------------------------------------------------------
+class TransformerBaseline(nn.Module):
+    """标准 Transformer 编码器股价预测基线。
+
+    结构：特征投影 + 可学习位置编码 -> Transformer Encoder -> 最后时刻隐态 -> 预测头。
+    与 MambaBaseline / BiMambaStock 的区别仅在编码器，输入输出口径完全一致，
+    保证"架构对比"的唯一变量是序列建模器本身。
+
+    时序严谨性：注意力只作用于 [t-L+1, t] 的历史窗口内部，取最后时刻隐态做预测，
+    不涉及 t 日之后的任何数据，与双向 Mamba 的因果性论证同理。
+
+    输入: (B, L, F)，B=批量，L=窗口长度（60），F=特征维数（10）
+    输出: (B,)，未来 horizon 日对数收益率的预测值
+    """
+
+    def __init__(self, n_features: int, d_model: int = 32, n_layers: int = 2,
+                 n_heads: int = 4, max_len: int = 128):
+        super().__init__()
+        self.in_proj = nn.Linear(n_features, d_model)      # 特征维 -> 模型维
+        # 可学习位置编码：为自注意力补充时间顺序信息（标准做法）
+        self.pos_emb = nn.Parameter(torch.zeros(1, max_len, d_model))
+        layer = nn.TransformerEncoderLayer(
+            d_model=d_model, nhead=n_heads,
+            dim_feedforward=4 * d_model,   # 前馈层宽度按 4 倍惯例设置
+            dropout=0.1,                   # 标准配置，不做针对性调参（公平对比）
+            activation='gelu', batch_first=True)
+        self.encoder = nn.TransformerEncoder(layer, num_layers=n_layers)
+        self.head = nn.Linear(d_model, 1)                  # 最后时刻隐态 -> 标量预测
+        nn.init.trunc_normal_(self.pos_emb, std=0.02)
+
+    def encode(self, x: torch.Tensor) -> torch.Tensor:
+        """特征投影 + 位置编码 + 自注意力编码，供 PanelTransformer 复用。"""
+        h = self.in_proj(x) + self.pos_emb[:, :x.size(1)]
+        return self.encoder(h)                             # (B, L, D)
+
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
+        return self.head(self.encode(x)[:, -1]).squeeze(-1)  # (B,)
+
+
+class PanelTransformer(nn.Module):
+    """Transformer 基线的多股票面板版本：逐股独立编码，不接跨股票注意力。
+
+    与 PanelBiMamba 的唯一区别是编码器换成 Transformer 编码器，
+    保证多股票场景下"Transformer vs Bi-Mamba"对照的唯一变量是编码器结构。
+
+    输入: (B, N, L, F)  输出: (B, N)
+    """
+
+    def __init__(self, n_features: int, d_model: int = 32, n_layers: int = 2,
+                 n_heads: int = 4, max_len: int = 128):
+        super().__init__()
+        self.backbone = TransformerBaseline(n_features, d_model, n_layers, n_heads, max_len)
+
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
+        B, N, L, F = x.shape
+        # 批次维与股票维合并，逐股独立编码，取最后时刻隐态
+        h = self.backbone.encode(x.reshape(B * N, L, F))[:, -1]   # (B*N, D)
+        return self.backbone.head(h).squeeze(-1).reshape(B, N)    # (B, N)
 
 
 # ---------------------------------------------------------------------------
