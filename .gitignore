@@ -87,6 +87,7 @@ docs/csv_full/
 docs/*.docx
 docs/*.pptx
 docs/*.pdf
+docs/pdf/
 
 # 传输归档
 *.tar.gz
