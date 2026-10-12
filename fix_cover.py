@@ -12,8 +12,8 @@ d = Document(PATH)
 # 页面内容宽度（twips）
 sec = d.sections[0]
 content_w = int((sec.page_width - sec.left_margin - sec.right_margin) / 635)
-# 列宽分配：标签1 / 值1 / 标签2 / 值2
-lw1, vw1, lw2 = 1700, 2600, 1250
+# 列宽分配：标签1 / 值1 / 标签2 / 值2（标签列加宽以容纳"研究所（院系）"7字不折行）
+lw1, vw1, lw2 = 2400, 2500, 950
 vw2 = content_w - lw1 - vw1 - lw2
 
 FONT = '<w:rFonts w:ascii="SimSun" w:hAnsi="SimSun" w:eastAsia="宋体"/><w:b/><w:bCs/><w:sz w:val="30"/><w:szCs w:val="30"/>'
@@ -24,7 +24,7 @@ def cell(text, width, underline, align='center', span=1):
     span_xml = f'<w:gridSpan w:val="{span}"/>' if span > 1 else ''
     return (f'<w:tc><w:tcPr><w:tcW w:w="{width}" w:type="dxa"/>{span_xml}'
             f'{border}<w:vAlign w:val="bottom"/></w:tcPr>'
-            f'<w:p><w:pPr><w:spacing w:line="240" w:lineRule="auto"/><w:jc w:val="{align}"/>'
+            f'<w:p><w:pPr><w:spacing w:line="300" w:lineRule="exact"/><w:jc w:val="{align}"/>'
             f'<w:rPr>{FONT}</w:rPr></w:pPr>'
             f'<w:r><w:rPr>{FONT}</w:rPr><w:t xml:space="preserve">{text}</w:t></w:r></w:p></w:tc>')
 
