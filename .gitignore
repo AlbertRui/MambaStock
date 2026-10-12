@@ -88,6 +88,8 @@ docs/*.docx
 docs/*.pptx
 docs/*.pdf
 docs/pdf/
+# 封面字段配置（含个人信息，仅本地保留）
+docs/cover_config.json
 
 # 传输归档
 *.tar.gz

@@ -5,6 +5,7 @@
 #   单字段行 = 标签(8单位) + 37单位下划线；双字段行 = 8 + 15 + 标签 + 18
 #   值插入下划线空格正中，左右扣减空格保持总单位数不变 → 行右端自然对齐
 import copy
+import json
 import shutil
 import time
 from docx import Document
@@ -12,6 +13,10 @@ from docx.oxml.ns import qn
 
 TPL = 'docs/中期答辩模板.docx'
 PATH = 'docs/基于Mamba状态空间模型的股票价格预测方法研究-中期.docx'
+
+# 封面字段值存于 docs/cover_config.json（本地文件，已 gitignore，不进仓库）
+with open('docs/cover_config.json', encoding='utf-8') as f:
+    F = json.load(f)
 
 
 def units(s):
@@ -31,15 +36,15 @@ tp = [tpl.paragraphs[i]._p for i in range(10, 18)]  # 模板封面字段行 P10-
 
 # (模板段索引, [(run序号, 下划线总单位数, 值), ...], 标签run替换文本)
 SPEC = [
-    (0, [(1, 37, '基于Mamba状态空间模型的')], None),   # 报告题目 行1
-    (0, [(1, 37, '股票价格预测方法研究')], '　　　　'),  # 报告题目 行2（标签位补4个全角空格=8单位，下划线起点对齐）
-    (1, [(1, 15, '***'), (3, 18, '***')], None),   # 学生姓名/学号
-    (2, [(1, 14, '***'), (3, 18, '副教授')], None),          # 指导教师/职称
-    (3, [], None),                                     # 学位类别（模板示例值=电子信息硕士，沿用）
-    (4, [(1, 37, '人工智能')], None),                  # 学科专业
-    (5, [(1, 37, '模式识别与机器学习')], None),        # 研究方向
-    (6, [], None),                                     # 研究所（院系）（模板示例值=人工智能学院，沿用）
-    (7, [(1, 37, '2026.10.07')], None),                # 填表日期
+    (0, [(1, 37, F['title1'])], None),                 # 报告题目 行1
+    (0, [(1, 37, F['title2'])], '　　　　'),           # 报告题目 行2（标签位补4个全角空格=8单位，下划线起点对齐）
+    (1, [(1, 15, F['name']), (3, 18, F['student_id'])], None),        # 学生姓名/学号
+    (2, [(1, 14, F['advisor']), (3, 18, F['advisor_title'])], None),  # 指导教师/职称
+    (3, [], None),                                     # 学位类别（模板示例值，沿用）
+    (4, [(1, 37, F['major'])], None),                  # 学科专业
+    (5, [(1, 37, F['direction'])], None),              # 研究方向
+    (6, [], None),                                     # 研究所（院系）（模板示例值，沿用）
+    (7, [(1, 37, F['date'])], None),                   # 填表日期
 ]
 
 new_paras = []
