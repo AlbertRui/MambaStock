@@ -24,7 +24,7 @@ def cell(text, width, underline, align='center', span=1):
     span_xml = f'<w:gridSpan w:val="{span}"/>' if span > 1 else ''
     return (f'<w:tc><w:tcPr><w:tcW w:w="{width}" w:type="dxa"/>{span_xml}'
             f'{border}<w:vAlign w:val="bottom"/></w:tcPr>'
-            f'<w:p><w:pPr><w:spacing w:line="300" w:lineRule="auto"/><w:jc w:val="{align}"/>'
+            f'<w:p><w:pPr><w:spacing w:line="240" w:lineRule="auto"/><w:jc w:val="{align}"/>'
             f'<w:rPr>{FONT}</w:rPr></w:pPr>'
             f'<w:r><w:rPr>{FONT}</w:rPr><w:t xml:space="preserve">{text}</w:t></w:r></w:p></w:tc>')
 
