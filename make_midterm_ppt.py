@@ -1,25 +1,28 @@
-# 由开题答辩PPT生成中期答辩PPT：完整复用模板（母版/导航栏/装饰/版式），
-# 仅替换文字、表格与配图。所有实验数值与中期报告文档口径一致。
+# 中期答辩PPT v2：仅以开题PPT为视觉模板（母版/导航栏/顶栏/装饰/封面/过渡页/致谢），
+# 全部正文按中期报告重新组织：研究概况→已完成工作→阶段性实验结果→问题与解决→下阶段计划。
+# 实验数值与中期报告完全一致，完整呈现含不利结果，不挑选数据。
 # 用法：.venv/Scripts/python.exe make_midterm_ppt.py
-# 输出：docs/ppt/中期答辩v1.pptx
+# 输出：docs/ppt/中期答辩v2.pptx
 import copy
 from pptx import Presentation
 from pptx.util import Inches, Pt
 from pptx.dml.color import RGBColor
+from pptx.enum.shapes import MSO_SHAPE
 from pptx.oxml.ns import qn
 
 SRC = 'docs/ppt/开题v2.pptx'
-DST = 'docs/ppt/中期答辩v1.pptx'
+DST = 'docs/ppt/中期答辩v2.pptx'
+ACCENT = RGBColor(0x17, 0x49, 0x94)
+LIGHT = RGBColor(0xE9, 0xF0, 0xF8)
+DARK = RGBColor(0x33, 0x33, 0x33)
 
 prs = Presentation(SRC)
 S = prs.slides
 
 
 def set_tf(tf, text):
-    """替换文本框全部内容，保留首个段落中最长run的字体格式；\n 分段"""
-    lines = text.split('\n')
-    p0 = tf.paragraphs[0]._p
-    proto = copy.deepcopy(p0)
+    """替换文本框内容，保留首段最长run的字体格式；\n 分段"""
+    proto = copy.deepcopy(tf.paragraphs[0]._p)
     for br in proto.findall(qn('a:br')):
         proto.remove(br)
     runs = proto.findall(qn('a:r'))
@@ -31,7 +34,7 @@ def set_tf(tf, text):
     txBody = tf._txBody
     for p in list(txBody.findall(qn('a:p'))):
         txBody.remove(p)
-    for line in lines:
+    for line in text.split('\n'):
         p = copy.deepcopy(proto)
         r = p.find(qn('a:r'))
         if r is not None:
@@ -51,42 +54,19 @@ def by_name(slide, name):
 
 
 def in_group(slide, group_name, shape_name):
-    g = by_name(slide, group_name)
-    for sh in g.shapes:
+    for sh in by_name(slide, group_name).shapes:
         if sh.name == shape_name:
             return sh
     raise KeyError(f'{group_name}/{shape_name}')
 
 
-def set_table(tbl_shape, rows):
-    t = tbl_shape.table
-    assert len(rows) == len(t.rows), f'行数不符: {len(rows)} vs {len(t.rows)}'
-    for r, line in zip(t.rows, rows):
-        assert len(line) == len(r.cells), f'列数不符: {line}'
-        for c, txt in zip(r.cells, line):
-            set_tf(c.text_frame, txt)
-
-
-def deep_find(shapes, name):
-    for sh in shapes:
-        if sh.name == name:
-            return sh
-        if sh.shape_type == 6:
-            found = deep_find(sh.shapes, name)
-            if found is not None:
-                return found
-    return None
-
-
-# 五章节新名称（导航栏统一替换）
 NAV_OLD = ['研究背景及意义', '国内外研究现状', '研究目标与内容', '技术方案与路线', '预期成果与计划']
-NAV_NEW = ['研究进展概述', '核心模块实现', '阶段性实验结果', '问题与解决方案', '下一阶段工作计划']
-# 各章节导航高亮矩形(left, width)与三角箭头left（英寸，取自原模板对应章节页）
+NAV_NEW = ['研究概况', '已完成工作', '阶段性实验结果', '问题与解决方案', '下一阶段工作计划']
 SEC_HL = {1: (1.2, 2.2, 1.9), 2: (3.4, 2.9, 4.6), 3: (6.3, 2.9, 7.4), 4: (9.2, 2.3, 10.0), 5: (11.3, 2.0, 12.0)}
+PAGE_SHAPES = ('矩形 46', 'Text 32', 'Shape 31')
 
 
 def chrome(slide, sec, page):
-    """内容页公共元素：导航栏文字、章节高亮位置、页码"""
     for sh in slide.shapes:
         if sh.has_text_frame:
             txt = sh.text_frame.text.strip()
@@ -97,18 +77,69 @@ def chrome(slide, sec, page):
             sh.left, sh.width = Inches(l), Inches(w)
         if sh.name in ('等腰三角形 33', '等腰三角形 92', 'Shape 11'):
             sh.left = Inches(SEC_HL[sec][2])
-        if sh.name in ('矩形 46', 'Text 32') and sh.has_text_frame and sh.text_frame.text.strip().isdigit():
+        if sh.name in PAGE_SHAPES and sh.has_text_frame and sh.text_frame.text.strip().isdigit():
             set_shape(sh, f'{page:02d}')
 
 
-def add_note(slide, text, left, top, width):
-    box = slide.shapes.add_textbox(Inches(left), Inches(top), Inches(width), Inches(0.4))
-    box.text_frame.text = text
-    box.text_frame.paragraphs[0].runs[0].font.size = Pt(12)
-    box.text_frame.paragraphs[0].runs[0].font.color.rgb = RGBColor(0x40, 0x40, 0x40)
+def body_clear(slide, keep):
+    """删除正文区（y>1.4in）全部旧内容，仅保留 keep 列出的形状；页码始终保留"""
+    for sh in list(slide.shapes):
+        if sh.name in keep:
+            continue
+        if sh.name in PAGE_SHAPES and sh.has_text_frame and sh.text_frame.text.strip().isdigit():
+            continue
+        if sh.top is not None and sh.top > Inches(1.4):
+            sh._element.getparent().remove(sh._element)
 
 
-# ========== S1 封面（汇报人/指导教师等字段保持原样，不改动） ==========
+def add_text(slide, text, left, top, width, height, size=13, color=DARK, bold=False):
+    box = slide.shapes.add_textbox(Inches(left), Inches(top), Inches(width), Inches(height))
+    tf = box.text_frame
+    tf.word_wrap = True
+    for i, line in enumerate(text.split('\n')):
+        pgh = tf.paragraphs[0] if i == 0 else tf.add_paragraph()
+        pgh.text = line
+        pgh.space_after = Pt(6)
+        for run in pgh.runs:
+            run.font.size = Pt(size)
+            run.font.color.rgb = color
+            run.font.bold = bold
+    return box
+
+
+def add_table(slide, data, left, top, col_widths, row_h=0.34, size=12, bold_cells=()):
+    rows, cols = len(data), len(data[0])
+    width = sum(col_widths)
+    t = slide.shapes.add_table(rows, cols, Inches(left), Inches(top),
+                               Inches(width), Inches(row_h * rows)).table
+    for j, w in enumerate(col_widths):
+        t.columns[j].width = Inches(w)
+    for i, row in enumerate(data):
+        t.rows[i].height = Inches(row_h)
+        for j, val in enumerate(row):
+            cell = t.cell(i, j)
+            cell.text = str(val)
+            for pgh in cell.text_frame.paragraphs:
+                for run in pgh.runs:
+                    run.font.size = Pt(size)
+                    if i == 0 or (i, j) in bold_cells:
+                        run.font.bold = True
+    return t
+
+
+def add_card(slide, left, top, width, height, title, bullets):
+    card = slide.shapes.add_shape(MSO_SHAPE.ROUNDED_RECTANGLE,
+                                  Inches(left), Inches(top), Inches(width), Inches(height))
+    card.fill.solid()
+    card.fill.fore_color.rgb = LIGHT
+    card.line.color.rgb = ACCENT
+    card.line.width = Pt(1)
+    card.shadow.inherit = False
+    add_text(slide, title, left + 0.15, top + 0.15, width - 0.3, 0.5, size=15, color=ACCENT, bold=True)
+    add_text(slide, bullets, left + 0.15, top + 0.75, width - 0.3, height - 0.9, size=12)
+
+
+# ========== S1 封面（个人信息字段保持原文件内容，不改动） ==========
 s = S[0]
 set_shape(by_name(s, '文本框 9'), 'Mid-term Progress Report')
 set_shape(by_name(s, '文本框 33'), '2026年10月')
@@ -121,180 +152,218 @@ for g, name, txt in [('组合 60', '文本框 11', NAV_NEW[0]), ('组合 69', '�
     set_shape(in_group(s, g, name), txt)
 
 # ========== 章节过渡页 ==========
-for idx, cn, en in [(2, NAV_NEW[0], 'Research Progress Overview'),
-                    (5, NAV_NEW[1], 'Core Module Implementation'),
+for idx, cn, en in [(2, NAV_NEW[0], 'Research Overview'),
+                    (5, NAV_NEW[1], 'Completed Work'),
                     (8, NAV_NEW[2], 'Experimental Results and Analysis'),
                     (11, NAV_NEW[3], 'Problems and Solutions'),
                     (17, NAV_NEW[4], 'Next-stage Work Plan')]:
     set_shape(by_name(S[idx], '文本框 8'), cn)
     set_shape(by_name(S[idx], '文本框 9'), en)
 
-# ========== S4（1.1 研究目标与总体进展） ==========
+# ========== S4（1.1 研究背景与研究目标，保留左侧通用金融配图） ==========
 s = S[3]
 chrome(s, 1, 1)
-set_shape(by_name(s, '文本框 34'), '1.1  研究目标与总体进展')
+set_shape(by_name(s, '文本框 34'), '1.1  研究背景与研究目标')
 set_shape(by_name(s, '文本框 12'),
-    '研究目标：针对MambaStock单向结构、跨股票关系建模与训练策略的不足，构建Bi-Mamba-Stock模型，'
-    '在保持线性计算复杂度的前提下，提升股价预测精度与鲁棒性\n'
-    '总体进展：严格按照开题报告技术路线推进，目前按计划完成阶段性目标\n'
-    '已完成：数据预处理管线与除息口径修正、三大核心模块实现、4股单股票与8股面板完整实验、关键问题诊断与修复\n'
-    '正在进行：沪深300全市场数据扩展与主流基线补充的准备工作')
+    '研究背景：股价呈现非线性、非平稳、高噪声与长程依赖特征。Mamba以线性复杂度实现长序列建模，'
+    '但MambaStock单向扫描丢失反向信息，跨股票关系建模与训练策略仍有不足\n'
+    '研究目标：提出Bi-Mamba-Stock模型——双向选择性扫描＋轻量化跨股票注意力＋波动自适应训练，'
+    '在保持O(L)线性复杂度的前提下，提升股价预测精度与鲁棒性\n'
+    '研究对象：沪深300成分股日频数据，60日滑动窗口预测未来1日/5日收益率\n'
+    '评估体系：MSE、MAE、决定系数R²、方向准确率（DA），以MambaStock与Transformer为对比基线')
 
-# ========== S5（1.2 已完成工作概览） ==========
+# ========== S5（1.2 研究内容：三大模块卡片＋技术路线，全部新建） ==========
 s = S[4]
 chrome(s, 1, 2)
-set_shape(by_name(s, '文本框 34'), '1.2  已完成工作概览')
-for name, txt in [
-    ('Text 3', '数据与标签'), ('Text 5', '防泄漏预处理管线'),
-    ('Text 6', '对数收益率＋Z-score标准化，严格时序70%/15%/15%切分'),
-    ('Text 8', '除息口径严谨修正'), ('Text 9', 'pre_close逐日修正收益率，与官方涨跌幅交叉校验一致'),
-    ('Text 11', '三大核心模块实现'), ('Text 12', '双向选择性扫描＋跨股票注意力＋波动自适应损失'),
-    ('Text 14', '完整实验矩阵'), ('Text 15', '4股×5配置单股票实验＋8股面板消融实验'),
-    ('Text 17', '阶段结论：开题提出的三大创新模块均已落地并完成小规模验证，实验流程可复现、结果可对比，为全市场扩展奠定基础。'),
-]:
-    set_shape(in_group(s, '组合 24', name), txt)
+set_shape(by_name(s, '文本框 34'), '1.2  研究内容：三大核心模块与技术路线')
+body_clear(s, keep={'文本框 34'})
+add_card(s, 0.6, 2.3, 3.9, 3.5, '① 双向选择性状态空间编码',
+         '• 前向/后向两条独立Mamba路径\n• 可学习门控融合双向隐态\n• 同时捕捉前向趋势与后向上下文\n• 保持O(L)线性复杂度')
+add_card(s, 4.75, 2.3, 3.9, 3.5, '② 轻量化跨股票注意力',
+         '• Q/K/V来自双向编码隐态\n• 缩放点积注意力，无图卷积\n• 动态提取股票间隐含关联\n• 面板模型仅约4.6万参数')
+add_card(s, 8.9, 2.3, 3.9, 3.5, '③ 波动自适应训练策略',
+         '• EWMA估计个股历史波动率\n• 样本分低/中/高三档\n• 损失权重0.5 / 1.0 / 2.0\n• 增强极端行情下的鲁棒性')
+add_text(s, '技术路线：Tushare数据 → 防泄漏预处理 → 双向状态空间编码 → 跨股票注意力 → 波动自适应训练 → 多基线对比与消融评估',
+         0.6, 6.15, 12.2, 0.6, size=13, color=ACCENT, bold=True)
 
-# ========== S7（2.1 三大核心模块：设计与实现） ==========
+# ========== S7（2.1 数据与预处理：真实数据表＋防泄漏要点） ==========
 s = S[6]
 chrome(s, 2, 3)
-set_shape(by_name(s, '文本框 34'), '2.1  三大核心模块：设计与实现')
-for name, txt in [('文本框 4', '双向选择性扫描'), ('文本框 6', '跨股票注意力'),
-                  ('文本框 10', '波动自适应训练'), ('文本框 14', '严谨实验设计')]:
-    set_shape(deep_find(by_name(s, '组合 28').shapes, name), txt)
-set_table(by_name(s, '表格 52'), [
-    ['模块一：前向＋后向独立状态空间路径，可学习门控融合双向隐态',
-     '模块二：Q/K/V来自双向编码隐态，缩放点积注意力，无图卷积',
-     '模块三：EWMA波动率分低/中/高三档，损失权重0.5/1.0/2.0',
-     '严格时序切分；标准化仅用训练集拟合；pre_close标签修正'],
-    ['验证情况：模型维度32容量匹配后，双向结构在多数股票上MSE/MAE优于单向基线',
-     '验证情况：注意力坍缩已诊断并修复，权重恢复差异化分布',
-     '验证情况：招商银行股方向准确率0.5430，为该股票五组配置最高',
-     '验证情况：单股票＋面板双场景实验，种子固定、结果可复现'],
-    ['复杂度：仅增加一条扫描路径，保持O(L)线性复杂度',
-     '参数量：面板模型约4.6万参数，轻量化设计',
-     '机制：高波动样本获得更高学习优先级，增强极端行情鲁棒性',
-     '评估口径：MSE/MAE/R²/方向准确率，验证集早停与最优权重回滚'],
-])
-set_shape(by_name(s, '文本框 54'), '三大模块均已实现并完成小规模验证；消融开关支持逐模块对照实验。')
+set_shape(by_name(s, '文本框 34'), '2.1  数据与预处理：真实数据与防泄漏设计')
+body_clear(s, keep={'文本框 34'})
+data = [('股票代码', '股票名称', '数据区间', '交易日数'),
+        ('000001.SZ', '平安银行', '2018.06—2025.12', '1843'),
+        ('600036.SH', '招商银行', '2018.06—2025.12', '1843'),
+        ('601166.SH', '兴业银行', '2018.06—2025.12', '1843'),
+        ('601288.SH', '农业银行', '2018.06—2025.12', '1843'),
+        ('601328.SH', '交通银行', '2018.06—2025.12', '1843'),
+        ('601398.SH', '工商银行', '2018.06—2025.12', '1843'),
+        ('601939.SH', '建设银行', '2018.06—2025.12', '1843'),
+        ('601988.SH', '中国银行', '2018.06—2025.12', '1843')]
+add_table(s, data, 0.5, 2.2, [1.7, 1.5, 2.9, 1.3], row_h=0.34, size=12)
+add_text(s, '注：中期阶段采用同板块8只银行股进行小规模验证；沪深300全市场扩展为下一阶段任务。',
+         0.5, 5.5, 7.4, 0.7, size=11)
+add_text(s,
+    '预处理管线\n'
+    '• 对数收益率 → Z-score标准化 → 60日滑动窗口\n'
+    '• 10维特征：OHLCV＋MA5/MA20＋RSI＋MACD\n'
+    '• pre_close逐日修正除息收益率，与官方涨跌幅交叉校验（最大偏差<0.00005）\n'
+    '防泄漏设计\n'
+    '• 严格时序切分：训练/验证/测试＝70%/15%/15%\n'
+    '• 标准化参数仅用训练集拟合\n'
+    '• 模型选择仅依据验证集，不使用测试集调参',
+    8.3, 2.2, 4.6, 4.9, size=12)
 
-# ========== S8（2.2 关键问题诊断与修复） ==========
+# ========== S8（2.2 三大核心模块实现，复用模板样式表） ==========
 s = S[7]
 chrome(s, 2, 4)
-set_shape(by_name(s, '文本框 34'), '2.2  关键问题诊断与修复')
-set_table(by_name(s, '表格 1'), [
-    ['发现的问题', '原因分析与解决方案'],
-    ['除息日虚假收益：close.shift(1)计算收益率在除权除息日产生规律性污染样本',
-     '改用pre_close逐日修正收益率，与官方涨跌幅字段交叉校验，最大偏差不超过0.00005'],
-    ['小样本双向过拟合：模型维度16时双向参数量约为基线两倍，指标反劣于基线',
-     '容量与正则匹配对照实验：模型维度32配合权重衰减后，双向结构稳定反超基线'],
-    ['注意力权重坍缩：统一权重衰减下，跨股票注意力恒为均匀分布（各股1/8）',
-     '注意力分支豁免权重衰减后重新训练，权重恢复差异化，整体指标保持基本稳定'],
-    ['算力与数据约束：CPU单组实验约30分钟；数据接口存在限流',
-     '迁移GPU云平台，单epoch由约138秒降至约2.3秒（约60倍）；下载管线支持限流重试与断点续传'],
-])
+set_shape(by_name(s, '文本框 34'), '2.2  三大核心模块的实现与验证')
+tbl = by_name(s, '表格 1').table
+new_rows = [
+    ['核心模块', '实现要点与验证情况'],
+    ['模块一：双向选择性扫描', '前向/后向独立Mamba路径＋可学习门控融合；模型维度32容量匹配后，多数股票MSE/MAE优于单向基线'],
+    ['模块二：轻量化跨股票注意力', 'Q/K/V源自双向隐态的缩放点积注意力，无图卷积；注意力坍缩已诊断并修复，权重恢复差异化'],
+    ['模块三：波动自适应训练', 'EWMA波动率三档分桶，损失权重0.5/1.0/2.0；招商银行股方向准确率0.5430为该股票五组配置最高'],
+    ['工程保障', '模块化消融开关、固定随机种子、验证集早停与最优权重回滚；GPU云训练较CPU提速约60倍，远程工作流已打通'],
+]
+for r, line in zip(tbl.rows, new_rows):
+    for c, txt in zip(r.cells, line):
+        set_tf(c.text_frame, txt)
 
-# ========== S10（3.1 实验设置与评估口径） ==========
+# ========== S10（3.1 实验设置：配置表＋实验矩阵说明） ==========
 s = S[9]
 chrome(s, 3, 5)
-set_shape(by_name(s, '文本框 3'), '3.1  实验设置与评估口径')
-set_shape(by_name(s, '文本框 6'),
-    '实验数据：8只银行股（银行板块），2018.06—2025.12日频数据，各1843个交易日\n'
-    '预测任务：60日滑动窗口 → 未来1日对数收益率，输入10维平稳化特征\n'
-    '对比基线：单向MambaStock、Transformer\n'
-    '模型规模：模型维度32、编码器2层；面板模型约4.6万参数\n'
-    '评估指标：MSE、MAE、决定系数R²、方向准确率（DA）\n'
-    '严谨性设计：严格时序切分，验证集早停与最优权重回滚，模型选择不使用测试集')
+t = by_name(s, '文本框 3')
+t.width = Inches(8.0)
+set_shape(t, '3.1  实验设置与评估口径')
+body_clear(s, keep={'文本框 3'})
+cfg = [('项目', '设置'),
+       ('滑动窗口长度', '60个交易日'),
+       ('输入特征', '10维平稳化特征'),
+       ('预测期限', '未来1日对数收益率'),
+       ('模型维度 / 编码器层数', '32 / 2'),
+       ('优化器', 'Adam（lr=1e-3，wd=1e-4，注意力分支免衰减）'),
+       ('训练轮数 / 早停耐心', '最多150轮 / 30轮'),
+       ('数据切分', '70% / 15% / 15%（严格时序）'),
+       ('随机种子', '固定为1（保证可复现）')]
+add_table(s, cfg, 0.5, 2.2, [2.5, 4.6], row_h=0.4, size=12)
+add_text(s,
+    '实验矩阵\n'
+    '• 单股票实验：4只股票 × 5种配置（单向基线 / Transformer / 双向 / 基线＋波动加权 / 双向＋波动加权）\n'
+    '• 面板消融实验：8只股票 × 5种配置（Transformer / 无注意力 / ＋注意力 / 无注意力＋波动加权 / 完整模型）\n'
+    '评估口径\n'
+    '• 日频个股收益率可预测性极低，R²普遍为负属领域共识\n'
+    '• 以"相对基线提升＋方向准确率＋消融一致性"作为评价标准',
+    8.0, 2.2, 5.0, 4.6, size=12)
 
-# ========== S11（3.2 单股票实验：核心结果） ==========
+# ========== S11（3.2 单股票完整结果：4股×5配置全表，最优加粗） ==========
 s = S[10]
 chrome(s, 3, 6)
-set_shape(by_name(s, '文本框 3'), '3.2  单股票实验：核心结果')
-for name, txt in [
-    ('Text 5', '01  招商银行（600036.SH）'), ('Text 7', '双向＋波动加权'),
-    ('Text 8', '• 方向准确率0.5430，五组配置最高'),
-    ('Text 9', '• 双向MSE 1.44×10⁻⁴，优于基线1.54'),
-    ('Text 10', '• 双向MAE 8.77×10⁻³，全组最优'),
-    ('Text 11', '• 双向MSE较基线下降6.5%'),
-    ('Text 13', '02  交通银行（601328.SH）'), ('Text 15', '双向结构'),
-    ('Text 16', '• 方向准确率0.5469，五组配置最高'),
-    ('Text 17', '• MSE 1.29×10⁻⁴，较基线下降6.5%'),
-    ('Text 18', '• MAE 8.72×10⁻³，优于基线9.20'),
-    ('Text 19', '• R²由-0.0881改善至-0.0135'),
-    ('Text 21', '03  四只股票总体结论'), ('Text 23', 'Overall Findings'),
-    ('Text 24', '• 四股中三股最高DA由本文配置取得'),
-    ('Text 25', '• 双向模块在多数股票上改善MSE/MAE'),
-    ('Text 26', '• 波动加权对高波动股票DA提升明显'),
-    ('Text 27', '• 日频R²普遍为负，以相对提升为评估口径'),
-]:
-    set_shape(in_group(s, '组合 27', name), txt)
+t = by_name(s, '文本框 3')
+t.width = Inches(9.5)
+set_shape(t, '3.2  单股票实验：四股×五配置完整结果')
+body_clear(s, keep={'文本框 3'})
+rows = [('股票', '模型配置', 'MSE(×10⁻⁴)', 'MAE(×10⁻³)', 'R²', '方向准确率')]
+raw = [
+    ('招商银行', [('单向基线', 1.54, 9.11, -0.1347, 0.4883), ('Transformer', 1.66, 9.80, -0.2242, 0.4922),
+                 ('双向', 1.44, 8.77, -0.0606, 0.4844), ('基线＋波动加权', 1.52, 9.10, -0.1216, 0.4844),
+                 ('双向＋波动加权', 1.60, 9.29, -0.1833, 0.5430)]),
+    ('农业银行', [('单向基线', 1.69, 10.12, -0.0007, 0.5352), ('Transformer', 1.93, 10.92, -0.1400, 0.4609),
+                 ('双向', 1.89, 10.76, -0.1178, 0.4727), ('基线＋波动加权', 1.70, 10.18, -0.0059, 0.5352),
+                 ('双向＋波动加权', 1.73, 10.27, -0.0243, 0.5078)]),
+    ('交通银行', [('单向基线', 1.38, 9.20, -0.0881, 0.4453), ('Transformer', 1.56, 9.74, -0.2219, 0.4531),
+                 ('双向', 1.29, 8.72, -0.0135, 0.5469), ('基线＋波动加权', 1.41, 9.21, -0.1060, 0.4766),
+                 ('双向＋波动加权', 1.54, 9.74, -0.2118, 0.5078)]),
+    ('中国银行', [('单向基线', 1.34, 8.87, -0.0528, 0.4531), ('Transformer', 1.45, 9.56, -0.1370, 0.4844),
+                 ('双向', 1.37, 9.00, -0.0731, 0.5234), ('基线＋波动加权', 1.47, 9.52, -0.1572, 0.4727),
+                 ('双向＋波动加权', 1.35, 9.05, -0.0623, 0.4531)]),
+]
+bold = set()
+for stock, cfgs in raw:
+    best_mse = min(c[1] for c in cfgs)
+    best_da = max(c[4] for c in cfgs)
+    for cfg, mse, mae, r2, da in cfgs:
+        i = len(rows)
+        rows.append((stock, cfg, f'{mse:.2f}', f'{mae:.2f}', f'{r2:.4f}', f'{da:.4f}'))
+        if mse == best_mse:
+            bold.add((i, 2))
+        if da == best_da:
+            bold.add((i, 5))
+add_table(s, rows, 0.45, 2.05, [1.4, 2.4, 2.0, 2.0, 2.0, 2.2], row_h=0.222, size=10, bold_cells=bold)
+add_text(s, '注：加粗为该股票该项最优。四股中三股的最高方向准确率由本文配置取得；农业银行基线DA仍最高，模块有效性存在个股差异（如实呈现）。',
+         0.45, 6.95, 12.4, 0.5, size=11)
 
-# ========== S13（3.3 八股面板消融实验结果） ==========
+# ========== S13（3.3 单股票结果分析：MSE/MAE对比图＋要点） ==========
 s = S[12]
 chrome(s, 3, 7)
-set_shape(by_name(s, '文本框 1'), '3.3  八股面板消融实验结果')
-for name, txt in [
-    ('Text 3', '📦 消融实验设置'),
-    ('Text 4', '• 8只银行股面板，同板块小规模验证'),
-    ('Text 5', '• 双向编码＋面板级跨股票注意力'),
-    ('Text 6', '• 波动自适应损失作为可选消融开关'),
-    ('Text 7', '• 参数量约4.6万，轻量化设计'),
-    ('Text 8', '• 严格时序切分，验证集早停'),
-    ('Text 10', '⚔️ 基线对比（h=1）'),
-    ('Text 12', 'Transformer'), ('Text 13', 'MSE 1.55×10⁻⁴'),
-    ('Text 15', '无注意力'), ('Text 21', '完整模型 ★'), ('Text 22', '本文方法'),
-    ('Text 24', '📊 四组消融配置结果'),
-    ('Text 27', '无注意力'), ('Text 28', 'MSE 1.36×10⁻⁴'), ('Text 29', 'DA 0.4907'),
-    ('Text 32', '＋注意力'), ('Text 33', 'MSE 1.34×10⁻⁴'), ('Text 34', 'DA 0.4941'),
-    ('Text 37', '＋波动加权'), ('Text 38', 'MSE 1.37×10⁻⁴'), ('Text 39', 'DA 0.4893'),
-    ('Text 42', '完整模型'), ('Text 43', 'MSE 1.34×10⁻⁴'), ('Text 44', 'DA 0.4956（最高）'),
-]:
-    set_shape(by_name(s, name), txt)
-set_shape(in_group(s, '组合 3', 'Text 16'), 'MSE 1.36×10⁻⁴')
+set_shape(by_name(s, '文本框 1'), '3.3  单股票结果分析：MSE 与 MAE')
+body_clear(s, keep={'文本框 1'})
+s.shapes.add_picture('results/v3_mse_mae_compare.png', Inches(0.85), Inches(2.15), width=Inches(11.6))
+add_text(s,
+    '• 双向结构在招商银行、交通银行实现MSE与MAE双改善，MSE较单向基线均下降约6.5%；在农业银行、中国银行上未获改善，个股差异客观存在\n'
+    '• 波动自适应加权的作用更多体现在方向准确率：招商银行"双向＋波动加权"DA 0.5430为该股票最高（见3.5节）',
+    0.85, 6.85, 11.6, 0.6, size=11)
 
-# ========== S14（3.4 误差指标对比图） ==========
+# ========== S14（3.4 八股面板消融：全配置表＋分析） ==========
 s = S[13]
 chrome(s, 3, 8)
-title = by_name(s, '文本框 1')
-title.width = Inches(11.0)
-set_shape(title, '3.4  误差指标对比：MSE 与 MAE')
-pic = by_name(s, '图片 6')
-pic._element.getparent().remove(pic._element)
-s.shapes.add_picture('results/v3_mse_mae_compare.png', Inches(0.85), Inches(2.3), width=Inches(11.6))
-add_note(s, '双向结构在招商银行、交通银行实现MSE与MAE双改善；完整模型在招商银行取得最低MAE。', 0.85, 7.05, 11.6)
+set_shape(by_name(s, '文本框 1'), '3.4  八股面板消融实验结果')
+body_clear(s, keep={'文本框 1'})
+panel = [('模型配置', 'MSE(×10⁻⁴)', 'MAE(×10⁻³)', 'R²', '方向准确率'),
+         ('Transformer', '1.55', '9.55', '-0.1753', '0.4927'),
+         ('无注意力', '1.36', '8.82', '-0.0340', '0.4907'),
+         ('＋跨股票注意力', '1.34', '8.84', '-0.0163', '0.4941'),
+         ('无注意力＋波动加权', '1.37', '8.85', '-0.0393', '0.4893'),
+         ('完整模型（注意力＋波动加权）', '1.34', '8.80', '-0.0158', '0.4956')]
+add_table(s, panel, 0.5, 2.3, [3.4, 1.5, 1.5, 1.3, 1.5], row_h=0.42, size=12,
+          bold_cells={(5, 1), (5, 4), (5, 5)})
+add_text(s,
+    '结果分析\n'
+    '• 完整模型方向准确率0.4956，居四组消融配置首位；MSE 1.34×10⁻⁴为全表最低之一\n'
+    '• 跨股票注意力使MSE较无注意力配置下降约1.5%，R²由-0.0340改善至-0.0163，消融方向一致\n'
+    '• 完整模型MSE较Transformer基线（1.55×10⁻⁴）低约13.5%\n'
+    '• 波动加权在面板场景未带来DA提升：8只同质银行股波动状态趋同，有待全市场异质性股票池检验',
+    0.5, 5.1, 12.3, 2.0, size=12)
 
-# ========== S15（3.5 跨股票注意力权重分析） ==========
+# ========== S15（3.5 方向准确率对比：DA图＋要点，含反例） ==========
 s = S[14]
 chrome(s, 3, 9)
-set_shape(by_name(s, '文本框 1'), '3.5  跨股票注意力权重分析')
-set_shape(by_name(s, '文本框 7'),
-    '诊断发现：统一权重衰减（1e-4）下，跨股票注意力权重恒为均匀分布（各股1/8），呈注意力坍缩现象\n'
-    '机制分析：8只同质银行股场景下，板块等权均值已是较强特征，差异化权重收益有限，投影矩阵梯度弱，被权重衰减持续压缩至零\n'
-    '修复验证：注意力分支（Q/K/V投影）豁免权重衰减后，权重恢复差异化（逐日偏差最大0.0124），'
-    '对角线自注意力均值0.1263高于均匀基准0.125，整体指标保持基本稳定')
-for name in ['图片 3', '图片 9']:
-    pic = by_name(s, name)
-    pic._element.getparent().remove(pic._element)
-s.shapes.add_picture('results/panel_attn_h1_attn_v3.png', Inches(7.0), Inches(2.3), width=Inches(5.4))
+set_shape(by_name(s, '文本框 1'), '3.5  方向准确率（DA）对比分析')
+body_clear(s, keep={'文本框 1'})
+s.shapes.add_picture('results/v3_da_compare.png', Inches(0.5), Inches(2.3), width=Inches(7.4))
+add_text(s,
+    '核心结果\n'
+    '• 四股中三股的最高DA由本文配置取得：\n'
+    '  交通银行（双向）0.5469\n'
+    '  招商银行（双向＋波动加权）0.5430\n'
+    '  中国银行（双向）0.5234\n'
+    '反例如实呈现\n'
+    '• 农业银行：单向基线DA 0.5352仍为最高，本文双向结构0.4727，存在明显个股差异\n'
+    '指标解读\n'
+    '• DA>0.5意味着方向预测优于随机基准，具备一定交易参考价值',
+    8.3, 2.3, 4.6, 4.8, size=12)
 
-# ========== S16（3.6 方向准确率对比） ==========
+# ========== S16（3.6 跨股票注意力：坍缩诊断与修复） ==========
 s = S[15]
 chrome(s, 3, 10)
-set_shape(by_name(s, '文本框 1'), '3.6  方向准确率（DA）对比')
-set_shape(by_name(s, '文本框 5'),
-    '核心结果：四只股票中三只的最高方向准确率由本文配置取得——交通银行（双向）0.5469、'
-    '招商银行（双向＋波动加权）0.5430、中国银行（双向）0.5234\n'
-    '面板结果：完整模型DA 0.4956，居四组消融配置首位；Transformer基线为0.4927\n'
-    '评估口径：日频个股收益率可预测性极低，R²普遍为负属领域共识；'
-    '以"相对基线提升＋方向准确率＋消融一致性"作为评估口径\n'
-    '后续计划：以3—5个随机种子重复实验，报告均值与标准差，增强统计稳健性')
-pic = by_name(s, '图片 4')
-pic._element.getparent().remove(pic._element)
-s.shapes.add_picture('results/v3_da_compare.png', Inches(5.9), Inches(2.6), width=Inches(7.0))
+set_shape(by_name(s, '文本框 1'), '3.6  跨股票注意力权重：坍缩诊断与修复')
+body_clear(s, keep={'文本框 1'})
+add_text(s,
+    '问题诊断\n'
+    '• 统一权重衰减（1e-4）下，注意力权重在全部测试交易日恒为均匀分布（各股1/8），出现注意力坍缩\n'
+    '机制分析\n'
+    '• 同质银行股等权特征已较强，差异化权重收益有限，投影矩阵梯度弱，被权重衰减持续压缩至零\n'
+    '修复与验证\n'
+    '• Q/K/V投影豁免权重衰减后重新训练：权重恢复差异化（逐日偏差最大0.0124）\n'
+    '• 对角线自注意力均值0.1263＞均匀基准0.125；MSE持平，R²由-0.0163略改善至-0.0158\n'
+    '• 更显著的差异化结构有待全市场、更具异质性的股票池检验',
+    0.5, 2.3, 6.2, 4.8, size=12)
+s.shapes.add_picture('results/panel_attn_h1_attn_v3.png', Inches(7.3), Inches(2.3), width=Inches(5.4))
 
-# ========== S17（3.7 阶段性结论） ==========
+# ========== S17（3.7 阶段性结论与不足，复用模板样式表） ==========
 s = S[16]
 chrome(s, 3, 11)
-set_shape(by_name(s, 'Text 12'), '3.7  阶段性结论')
+set_shape(by_name(s, 'Text 12'), '3.7  阶段性结论与不足')
 set_shape(by_name(s, '文本框 35'), '实验条件与可复现性')
 for name, txt in [
     ('Text 16', '硬件：GPU云平台训练，单epoch由约138秒降至约2.3秒'),
@@ -302,60 +371,48 @@ for name, txt in [
     ('Text 22', '数据：Tushare Pro日频数据，下载管线支持断点续传'),
 ]:
     set_shape(in_group(s, '组合 24', name), txt)
-set_table(by_name(s, 'Table 0'), [
+tbl = by_name(s, 'Table 0').table
+for r, line in zip(tbl.rows, [
     ['维度', '阶段性结论'],
-    ['模块有效性', '双向结构在容量匹配后于多数股票改善MSE/MAE；波动加权提升高波动股票DA'],
-    ['整体优势', '四股中三股最高DA由本文配置取得；面板完整模型DA居四组首位'],
+    ['模块有效性', '双向结构容量匹配后于多数股票改善MSE/MAE；波动加权提升部分高波动股票DA'],
+    ['整体优势', '四股中三股最高DA由本文配置取得；面板完整模型DA居四组消融配置首位'],
     ['严谨性', '除息口径修正、防泄漏切分、验证集模型选择，实验可复现'],
-    ['局限性', '日频R²普遍为负；小样本结论有待全市场、多种子进一步验证'],
-])
+    ['不足与边界', '日频R²普遍为负；农业银行存在基线更优反例；单种子、小样本结论有待全市场多种子验证'],
+]):
+    for c, txt in zip(r.cells, line):
+        set_tf(c.text_frame, txt)
 
-# ========== S19（4.1 问题复盘与应对策略） ==========
+# ========== S19（4.1 关键问题与解决方案，新建全表） ==========
 s = S[18]
 chrome(s, 4, 12)
-set_shape(by_name(s, 'Text 12'), '4.1  问题复盘与应对策略')
-for name, txt in [
-    ('Text 13', '已解决的问题'),
-    ('Text 17', '标签口径：除息日虚假收益 → pre_close逐日修正并交叉校验'),
-    ('Text 20', '小样本过拟合：低维度双向反劣 → 容量与正则匹配后稳定反超'),
-    ('Text 23', '注意力坍缩：权重恒为均匀分布 → 注意力分支豁免权重衰减'),
-    ('Text 24', '下一步重点'),
-    ('Text 27', '数据扩展：8只银行股 → 沪深300全市场面板（下载管线已就绪）'),
-    ('Text 29', '统计稳健：单种子 → 3—5个随机种子，报告均值与标准差'),
-    ('Text 31', '基线扩充：补充LSTM/Informer/PatchTST/iTransformer等主流模型对比'),
-]:
-    set_shape(in_group(s, '组合 77', name), txt)
+set_shape(by_name(s, 'Text 12'), '4.1  关键问题与解决方案')
+body_clear(s, keep={'Text 12'})
+probs = [('遇到的问题', '解决方案与现状'),
+         ('标签口径：除息日产生虚假收益', 'pre_close逐日修正＋官方涨跌幅交叉校验，已解决；全市场扩展时将执行同样校验'),
+         ('小样本下双向模型过拟合', '容量与正则匹配（维度32＋权重衰减）后双向稳定反超基线，已解决'),
+         ('跨股票注意力权重坍缩', '注意力分支豁免权重衰减，权重恢复差异化，已解决'),
+         ('数据接口限流与权限约束', '限流检测自动重试＋断点续传，全市场下载通道已就绪'),
+         ('本机算力不足', 'GPU云训练提速约60倍，免密登录、断点续跑、结果自动回传工作流已打通'),
+         ('日频R²为负引发的认识问题', '文献确认为领域共识；以相对提升＋DA＋消融一致性评估，下一阶段多种子验证')]
+add_table(s, probs, 0.5, 2.2, [4.2, 8.1], row_h=0.62, size=12)
 
 # ========== S20（5.1 下一阶段工作计划） ==========
 s = S[19]
 chrome(s, 5, 13)
 set_shape(by_name(s, 'Text 12'), '5.1  下一阶段工作计划')
-pic = by_name(s, '图片 20')
-pic._element.getparent().remove(pic._element)
-plan = [
-    ('时间', '工作内容'),
-    ('第1个月', '全市场数据扩展：沪深300全成分股下载、完整性校验与面板数据集构建'),
-    ('第2个月', '全市场对比实验：补充LSTM/Informer/PatchTST/iTransformer等主流基线，增加5日预测期限'),
-    ('第3个月', '统计稳健性验证：3—5个随机种子重复实验，报告均值与标准差，完善论文图表'),
-    ('第4—5个月', '学位论文初稿撰写（绪论、相关理论、模型设计、实验与分析）'),
-    ('第6个月', '论文修改定稿、材料归档与答辩准备'),
-]
-gt = s.shapes.add_table(6, 2, Inches(0.9), Inches(2.3), Inches(11.5), Inches(4.4)).table
-gt.columns[0].width = Inches(2.2)
-gt.columns[1].width = Inches(9.3)
-for r, (a, b) in zip(gt.rows, plan):
-    r.cells[0].text, r.cells[1].text = a, b
-    for c in r.cells:
-        for pgh in c.text_frame.paragraphs:
-            for run in pgh.runs:
-                run.font.size = Pt(14)
-for run in gt.rows[0].cells[0].text_frame.paragraphs[0].runs + gt.rows[0].cells[1].text_frame.paragraphs[0].runs:
-    run.font.bold = True
+body_clear(s, keep={'Text 12'})
+plan = [('时间', '工作内容'),
+        ('第1个月', '全市场数据扩展：沪深300全成分股下载、完整性校验与面板数据集构建'),
+        ('第2个月', '全市场对比实验：补充LSTM/Informer/PatchTST/iTransformer等主流基线，增加5日预测期限'),
+        ('第3个月', '统计稳健性验证：3—5个随机种子重复实验，报告均值与标准差，完善论文图表'),
+        ('第4—5个月', '学位论文初稿撰写（绪论、相关理论、模型设计、实验与分析）'),
+        ('第6个月', '论文修改定稿、材料归档与答辩准备')]
+add_table(s, plan, 0.9, 2.3, [2.2, 9.3], row_h=0.62, size=14)
 
 # ========== S21 结束页 ==========
 set_shape(by_name(S[20], '文本框 11'), '2026年10月')
 
-# ========== 重排页序：结果章节扩展为7页，问题/计划各1页 ==========
+# ========== 重排页序 ==========
 order = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 12, 13, 14, 15, 16, 11, 18, 17, 19, 20]
 sldIdLst = prs.slides._sldIdLst
 ids = list(sldIdLst)
