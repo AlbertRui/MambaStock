@@ -133,6 +133,8 @@ def add_table(slide, data, left, top, col_widths, row_h=0.34, size=12, bold_cell
         t.rows[i].height = Inches(row_h)
         for j, val in enumerate(row):
             cell = t.cell(i, j)
+            cell.margin_top = Inches(0.02)
+            cell.margin_bottom = Inches(0.02)
             cell.text = str(val)
             for pgh in cell.text_frame.paragraphs:
                 for run in pgh.runs:
@@ -165,6 +167,7 @@ C_VOL = clone_slide(S[12])    # 2.5 波动自适应
 C_PRED = clone_slide(S[12])   # 3.2 预测效果与收敛
 C_ERR = clone_slide(S[12])    # 3.3 价格曲线与逐日误差
 C_SUM = clone_slide(S[12])    # 3.9 小结与不足
+C_TAB2 = clone_slide(S[12])   # 3.1(二) 单股票结果下半
 
 # ========== 封面与目录（个人信息字段保持原文件内容） ==========
 s = S[0]
@@ -331,14 +334,31 @@ add_text(s,
 caption(s, '式(3-8)(3-9)：MSE、决定系数R²与方向准确率DA', 0.45, 6.0, 9.0)
 pic_fit(s, f'{A}/eq_metrics.png', 0.45, 6.35, 8.6, 1.0)
 
-# ========== 3.1 单股票完整结果（表3-3） ==========
-s = S[10]
-chrome(s, 3, 9)
-t = by_name(s, '文本框 3')
-t.width = Inches(10.5)
-set_shape(t, '3.1  单股票消融与Transformer对照（表3-3）')
-body_clear(s, keep={'文本框 3'})
-rows = [('股票', '模型配置', 'MSE(×10⁻⁴)', 'MAE(×10⁻³)', 'R²', '方向准确率')]
+# ========== 3.1 单股票完整结果（表3-3，拆为两页展示） ==========
+def stock_table(slide, stocks, part, page):
+    chrome(slide, 3, page)
+    t = by_name(slide, '文本框 1') if slide is C_TAB2 else by_name(slide, '文本框 3')
+    t.width = Inches(12.3)
+    names = '、'.join(x[0] for x in stocks)
+    set_shape(t, f'3.1  单股票消融与Transformer对照（{part}）：{names}')
+    body_clear(slide, keep={t.name})
+    rows = [('股票', '模型配置', 'MSE(×10⁻⁴)', 'MAE(×10⁻³)', 'R²', '方向准确率')]
+    bold = set()
+    for stock, cfgs in stocks:
+        best_mse = min(c[1] for c in cfgs)
+        best_da = max(c[4] for c in cfgs)
+        for cfg, mse, mae, r2, da in cfgs:
+            i = len(rows)
+            rows.append((stock, cfg, f'{mse:.2f}', f'{mae:.2f}', f'{r2:.4f}', f'{da:.4f}'))
+            if mse == best_mse:
+                bold.add((i, 2))
+            if da == best_da:
+                bold.add((i, 5))
+    add_table(slide, rows, 0.75, 2.35, [1.6, 2.8, 2.1, 2.1, 2.0, 2.2], row_h=0.38, size=12, bold_cells=bold)
+    add_text(slide, '注：同中期报告表3-3，加粗为该股票该项最优（MSE取最小、DA取最大）。',
+             0.75, 6.75, 11.8, 0.4, size=11)
+
+
 raw = [
     ('招商银行', [('单向基线', 1.54, 9.11, -0.1347, 0.4883), ('Transformer', 1.66, 9.80, -0.2242, 0.4922),
                  ('双向', 1.44, 8.77, -0.0606, 0.4844), ('基线＋波动加权', 1.52, 9.10, -0.1216, 0.4844),
@@ -353,24 +373,12 @@ raw = [
                  ('双向', 1.37, 9.00, -0.0731, 0.5234), ('基线＋波动加权', 1.47, 9.52, -0.1572, 0.4727),
                  ('双向＋波动加权', 1.35, 9.05, -0.0623, 0.4531)]),
 ]
-bold = set()
-for stock, cfgs in raw:
-    best_mse = min(c[1] for c in cfgs)
-    best_da = max(c[4] for c in cfgs)
-    for cfg, mse, mae, r2, da in cfgs:
-        i = len(rows)
-        rows.append((stock, cfg, f'{mse:.2f}', f'{mae:.2f}', f'{r2:.4f}', f'{da:.4f}'))
-        if mse == best_mse:
-            bold.add((i, 2))
-        if da == best_da:
-            bold.add((i, 5))
-add_table(s, rows, 0.45, 2.05, [1.4, 2.4, 2.0, 2.0, 2.0, 2.2], row_h=0.222, size=10, bold_cells=bold)
-add_text(s, '注：同中期报告表3-3，加粗为该股票该项最优。四股中三股的最高DA由本文双向或其波动加权配置取得；农业银行基线DA仍最高，模块有效性存在个股差异（如实呈现）。',
-         0.45, 6.95, 12.4, 0.5, size=11)
+stock_table(S[10], raw[:2], '一', 9)
+stock_table(C_TAB2, raw[2:], '二', 10)
 
 # ========== 3.2 预测效果与训练收敛（图3-1/3-2） ==========
 s = C_PRED
-chrome(s, 3, 10)
+chrome(s, 3, 11)
 set_shape(by_name(s, '文本框 1'), '3.2  预测效果与训练收敛（图3-1/3-2）')
 body_clear(s, keep={'文本框 1'})
 pic_fit(s, 'results/600036_price.png', 0.5, 2.4, 6.1, 3.1)
@@ -384,7 +392,7 @@ add_text(s,
 
 # ========== 3.3 双向机制效果：价格曲线与逐日误差（图3-8/3-9） ==========
 s = C_ERR
-chrome(s, 3, 11)
+chrome(s, 3, 12)
 set_shape(by_name(s, '文本框 1'), '3.3  双向机制效果：价格曲线与逐日误差（图3-8/3-9）')
 body_clear(s, keep={'文本框 1'})
 pic_fit(s, 'results/v2_overlay_601328.png', 0.5, 2.35, 6.3, 2.9)
@@ -398,7 +406,7 @@ add_text(s,
 
 # ========== 3.4 面板消融结果（表3-4、图3-7） ==========
 s = S[12]
-chrome(s, 3, 12)
+chrome(s, 3, 13)
 set_shape(by_name(s, '文本框 1'), '3.4  多股票面板消融结果（表3-4、图3-7）')
 body_clear(s, keep={'文本框 1'})
 panel = [('模型配置', 'MSE(×10⁻⁴)', 'MAE(×10⁻³)', 'R²', 'DA'),
@@ -423,7 +431,7 @@ add_text(s,
 
 # ========== 3.5 方向准确率与决定系数对比（图3-4/3-5） ==========
 s = S[13]
-chrome(s, 3, 13)
+chrome(s, 3, 14)
 set_shape(by_name(s, '文本框 1'), '3.5  方向准确率与决定系数对比（图3-4/3-5）')
 body_clear(s, keep={'文本框 1'})
 pic_fit(s, 'results/v3_da_compare.png', 0.45, 2.3, 6.15, 3.3)
@@ -437,7 +445,7 @@ add_text(s,
 
 # ========== 3.6 均方误差与平均绝对误差对比（图3-6） ==========
 s = S[14]
-chrome(s, 3, 14)
+chrome(s, 3, 15)
 set_shape(by_name(s, '文本框 1'), '3.6  均方误差与平均绝对误差对比（图3-6）')
 body_clear(s, keep={'文本框 1'})
 s.shapes.add_picture('results/v3_mse_mae_compare.png', Inches(0.85), Inches(2.15), width=Inches(11.6))
@@ -448,7 +456,7 @@ add_text(s,
 
 # ========== 3.7 跨股票注意力权重分析（图3-3） ==========
 s = S[15]
-chrome(s, 3, 15)
+chrome(s, 3, 16)
 set_shape(by_name(s, '文本框 1'), '3.7  跨股票注意力权重：坍缩诊断与修复（图3-3）')
 body_clear(s, keep={'文本框 1'})
 add_text(s,
@@ -466,7 +474,7 @@ caption(s, '图3-3 完整模型测试集平均跨股票注意力权重热力图'
 
 # ========== 3.8 双向模型提升幅度汇总（表3-5） ==========
 s = S[16]
-chrome(s, 3, 16)
+chrome(s, 3, 17)
 set_shape(by_name(s, 'Text 12'), '3.8  双向模型相对单向基线的提升幅度（表3-5）')
 body_clear(s, keep={'Text 12'})
 imp = [('对比对象', 'MSE变化率', 'R²变化量', 'DA变化（个百分点）'),
@@ -486,7 +494,7 @@ add_text(s,
 
 # ========== 3.9 阶段性小结与不足 ==========
 s = C_SUM
-chrome(s, 3, 17)
+chrome(s, 3, 18)
 set_shape(by_name(s, '文本框 1'), '3.9  阶段性小结与不足')
 body_clear(s, keep={'文本框 1'})
 add_text(s,
@@ -502,7 +510,7 @@ add_text(s,
 
 # ========== 4.1 关键问题与解决方案 ==========
 s = S[18]
-chrome(s, 4, 18)
+chrome(s, 4, 19)
 set_shape(by_name(s, 'Text 12'), '4.1  关键问题与解决方案')
 body_clear(s, keep={'Text 12'})
 probs = [('遇到的问题', '解决方案与现状'),
@@ -516,7 +524,7 @@ add_table(s, probs, 0.5, 2.2, [4.2, 8.1], row_h=0.62, size=12)
 
 # ========== 5.1 下一阶段工作计划 ==========
 s = S[19]
-chrome(s, 5, 19)
+chrome(s, 5, 20)
 set_shape(by_name(s, 'Text 12'), '5.1  下一阶段工作计划')
 body_clear(s, keep={'Text 12'})
 plan = [('时间', '工作内容'),
@@ -530,8 +538,8 @@ add_table(s, plan, 0.9, 2.3, [2.2, 9.3], row_h=0.62, size=14)
 # ========== 结束页 ==========
 set_shape(by_name(S[20], '文本框 11'), '2026年10月')
 
-# ========== 重排页序（27页） ==========
-order = [0, 1, 2, 3, 4, 5, 6, 21, 22, 23, 24, 9, 8, 10, 25, 26, 12, 13, 14, 15, 16, 27, 11, 18, 17, 19, 20]
+# ========== 重排页序（28页） ==========
+order = [0, 1, 2, 3, 4, 5, 6, 21, 22, 23, 24, 9, 8, 10, 28, 25, 26, 12, 13, 14, 15, 16, 27, 11, 18, 17, 19, 20]
 sldIdLst = prs.slides._sldIdLst
 ids = list(sldIdLst)
 for el in ids:
