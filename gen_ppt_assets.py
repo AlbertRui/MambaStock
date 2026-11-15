@@ -63,28 +63,45 @@ ax.text(4.8, 0.24, '标准化仅用训练集拟合  ·  pre_close标签修正  �
 fig.savefig(f'{OUT}/pipeline_leakfree.png', dpi=200, bbox_inches='tight', transparent=True)
 plt.close(fig)
 
-# ---------- 3. 评估指标公式（一行四式） ----------
-fig, ax = plt.subplots(figsize=(13.2, 0.8))
-ax.axis('off')
-forms = [
-    r'$\mathrm{MSE}=\frac{1}{N}\sum_{i=1}^{N}(\hat{y}_i-y_i)^2$',
-    r'$\mathrm{MAE}=\frac{1}{N}\sum_{i=1}^{N}|\hat{y}_i-y_i|$',
-    r'$R^2=1-\frac{\sum_i(y_i-\hat{y}_i)^2}{\sum_i(y_i-\bar{y})^2}$',
-    r'$\mathrm{DA}=\frac{1}{N}\sum_{i=1}^{N}\mathbf{1}\{\mathrm{sign}(\hat{y}_i)=\mathrm{sign}(y_i)\}$',
-]
-for i, f in enumerate(forms):
-    ax.text(0.125 + i * 0.25, 0.5, f, transform=ax.transAxes, ha='center', va='center', fontsize=15, color='#1a1a1a')
-fig.savefig(f'{OUT}/formula_metrics.png', dpi=200, bbox_inches='tight', transparent=True)
-plt.close(fig)
+# ---------- 3. 报告公式高清重渲染（记法与中期报告式3-1~3-9完全一致） ----------
+def render_formula(name, lines, figsize, fontsize=17):
+    fig, ax = plt.subplots(figsize=figsize)
+    ax.axis('off')
+    n = len(lines)
+    for i, f in enumerate(lines):
+        ax.text(0.5, 1 - (i + 0.5) / n, f, transform=ax.transAxes,
+                ha='center', va='center', fontsize=fontsize, color='#1a1a1a')
+    fig.savefig(f'{OUT}/{name}.png', dpi=200, bbox_inches='tight', transparent=True)
+    plt.close(fig)
 
-# ---------- 4. EWMA波动率与加权损失公式 ----------
-fig, ax = plt.subplots(figsize=(5.8, 1.7))
-ax.axis('off')
-ax.text(0.5, 0.8, r'$\sigma_t^2=\lambda\,\sigma_{t-1}^2+(1-\lambda)\,r_{t-1}^2$',
-        transform=ax.transAxes, ha='center', va='center', fontsize=16, color='#1a1a1a')
-ax.text(0.5, 0.3, r'$\mathcal{L}=\frac{\sum_i w_i\,\ell_i}{\sum_i w_i},\quad w_i\in\{0.5,\ 1.0,\ 2.0\}$',
-        transform=ax.transAxes, ha='center', va='center', fontsize=16, color='#1a1a1a')
-fig.savefig(f'{OUT}/formula_ewma.png', dpi=200, bbox_inches='tight', transparent=True)
-plt.close(fig)
+
+# 式(3-1)(3-2)：状态空间模型连续/离散形式
+render_formula('eq_ssm', [
+    r"$h'(t)=Ah(t)+Bx(t),\quad y(t)=Ch(t)$",
+    r'$h_t=Ah_{t-1}+Bx_t$',
+], (5.6, 1.2))
+
+# 式(3-3)(3-4)：双向扫描与门控融合
+render_formula('eq_bi', [
+    r'$h_f=\mathrm{Mamba}_f(x),\quad h_b=\mathrm{flip}(\mathrm{Mamba}_b(\mathrm{flip}(x)))$',
+    r'$g=\sigma(W_g\,x+b_g),\quad h=g\odot h_f+(1-g)\odot h_b$',
+], (6.4, 1.2))
+
+# 式(3-5)：跨股票缩放点积注意力
+render_formula('eq_attn', [
+    r'$\mathrm{CrossStockAttn}(Q,K,V)=\mathrm{softmax}\left(\frac{QK^{\top}}{\sqrt{d}}\right)V$',
+], (6.2, 0.75))
+
+# 式(3-6)(3-7)：EWMA波动率与归一化加权损失
+render_formula('eq_vol', [
+    r'$\sigma_t^2=\lambda\,\sigma_{t-1}^2+(1-\lambda)\,r_{t-1}^2$',
+    r'$w_i\in\{0.5,\ 1.0,\ 2.0\},\quad L=\frac{\sum_i w_i\,\ell_i}{\sum_i w_i}$',
+], (5.6, 1.4))
+
+# 式(3-8)(3-9)：MSE、R²与方向准确率评估口径
+render_formula('eq_metrics', [
+    r'$\mathrm{MSE}=\frac{1}{N}\sum_i(\hat{y}_i-y_i)^2$',
+    r'$R^2=1-\frac{\sum_i(\hat{y}_i-y_i)^2}{\sum_i(y_i-\bar{y})^2},\quad \mathrm{DA}=\frac{1}{N}\sum_i I\{\hat{y}_i\,y_i>0\}$',
+], (8.2, 1.5))
 
 print('素材已生成:', os.listdir(OUT))
